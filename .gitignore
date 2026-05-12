@@ -19,3 +19,6 @@ data/
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Données persistantes AgentMemory (ne pas versionner)
+memory/storage/

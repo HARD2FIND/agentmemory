@@ -1,0 +1,57 @@
+flowchart TD
+    subgraph User[Couche Utilisateur]
+        U[Utilisateur/Client]
+        Obsidian[Obsidian Vault]
+    end
+    subgraph Orchestration[Couche Orchestration]
+        Claude[Claude Code]
+        Codex[Codex]
+        Antigrav[Antigravity]
+        MultiOrch[Agent Teams / Gas Town / Multiclaude]
+    end
+    subgraph Memory[Couche Mémoire]
+        AgentMem[AgentMemory]
+        ContextIndex[Contexte Index]
+    end
+    subgraph Skills[Couche Skills]
+        PrintingPress[cli-printing-press]
+        SkillsDir[Skills personnalisés]
+    end
+    subgraph Automation[Couche Automatisation]
+        N8n[n8n Workflows]
+    end
+    subgraph Integrations[Couche Intégrations]
+        GhCLI[GitHub CLI]
+        APIExt[APIs externes]
+    end
+    subgraph Security[Couche Sécurité & Guardrails]
+        Secrets[Gestion des secrets]
+        Human[Validation humaine]
+    end
+    subgraph Observability[Couche Observabilité]
+        Logs[Logs & métriques]
+        Dashboards[Tableaux de bord]
+    end
+    subgraph Docs[Couche Documentation]
+        DocsRepo[Documentation & Runbooks]
+    end
+    
+    U --> Claude
+    Claude -->|orchestration| Codex
+    Claude -->|orchestration| Antigrav
+    Claude -->|orchestration| MultiOrch
+    Claude -->|demande de contexte| AgentMem
+    Claude -->|appelle| PrintingPress
+    Claude -->|appelle| N8n
+    Claude -->|appelle| GhCLI
+    Obsidian --> ContextIndex
+    AgentMem --> ContextIndex
+    SkillsDir --> PrintingPress
+    N8n --> APIExt
+    PrintingPress --> APIExt
+    GhCLI --> APIExt
+    Secrets --> Claude
+    Human --> Claude
+    Logs --> Dashboards
+    Dashboards --> Claude
+    DocsRepo --> Claude

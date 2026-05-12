@@ -1027,3 +1027,18 @@ npm run test:integration  # API tests (requires running services)
 <h2 id="license"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/tags/light/section-license.svg"><img src="assets/tags/section-license.svg" alt="License" height="32" /></picture></h2>
 
 [Apache-2.0](LICENSE)
+
+# Agentic OS Integration
+
+agentmemory is a core component of the **Agentic OS** architecture. 
+For a complete view of the OS, please refer to:
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed architecture design
+- [CLAUDE.md](CLAUDE.md) - Claude Code orchestration guide
+- [AGENTS.md](AGENTS.md) - Compatible agents and their roles
+- [SECURITY_AND_GUARDRAILS.md](SECURITY_AND_GUARDRAILS.md) - Security policies
+
+## Agentic OS Quick Start
+
+1. Copy `.env.example` to `.env` and fill in your secrets.
+2. Run `scripts/bootstrap.sh` to initialize the environment.
+3. Configure your orchestrator (e.g., Claude Code) to use this memory server.
