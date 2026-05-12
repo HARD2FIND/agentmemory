@@ -1,84 +1,64 @@
-# Guide de Déploiement VPS (AgentMemory GUI)
+# Guide de Déploiement VPS (Agentic OS)
 
-Ce guide explique comment héberger la GUI (Real-Time Viewer) d'AgentMemory et l'API sur un VPS, en sécurisant l'accès via un Reverse Proxy (Nginx/Caddy) avec SSL.
-
-Par défaut, AgentMemory écoute sur `127.0.0.1` (localhost) pour des raisons de sécurité (voir `.github/security-advisories/03-default-bind-0000.md`). Pour y accéder depuis l'extérieur, un reverse proxy est obligatoire.
+Ce guide explique comment héberger l'ensemble de l'Agentic OS (AgentMemory GUI + API + n8n) sur un VPS distant, accessible en HTTPS avec authentification.
 
 ## Prérequis
 
-- Un VPS (Ubuntu/Debian recommandé).
-- Un nom de domaine pointant vers l'IP du VPS (ex: `memory.votre-domaine.com`).
-- Docker et Docker Compose installés.
+| Composant | Version minimum | Vérification |
+|---|---|---|
+| VPS (Ubuntu/Debian) | 22.04+ | `lsb_release -a` |
+| Docker | 24+ | `docker --version` |
+| Docker Compose | v2+ | `docker compose version` |
+| Nom de domaine | - | DNS A record pointant vers l'IP du VPS |
 
-## 1. Configuration de l'environnement
-
-Sur le VPS, clonez le repository et configurez le fichier `.env` :
+## Déploiement en une commande
 
 ```bash
 git clone https://github.com/HARD2FIND/agentmemory.git
 cd agentmemory
-cp .env.example .env
+./scripts/deploy-agentic-os.sh
 ```
 
-Dans `.env`, assurez-vous de définir un secret fort pour protéger l'API :
-```env
-AGENTMEMORY_SECRET=votre_secret_tres_long_et_aleatoire
+Le script vous demandera de choisir "VPS" et votre nom de domaine. Il configurera automatiquement le reverse proxy Caddy avec SSL.
+
+## Architecture réseau sur le VPS
+
+```
+Internet
+   │
+   ├── :443 (HTTPS) → Caddy
+   │       ├── viewer.domaine.com → iii-engine:3113 (GUI)
+   │       ├── api.domaine.com    → iii-engine:3111 (API REST)
+   │       └── n8n.domaine.com    → n8n:5678 (Automatisation)
+   │
+   └── :80 (HTTP redirect → HTTPS) → Caddy
 ```
 
-## 2. Déploiement avec Docker Compose
+Tous les services internes (AgentMemory, n8n) écoutent uniquement sur `127.0.0.1`. Caddy est le seul point d'entrée exposé sur Internet et gère automatiquement les certificats SSL via Let's Encrypt.
 
-Utilisez le fichier `docker-compose.yml` existant. Il lance `iii-engine` (qui inclut AgentMemory).
+## Configuration DNS
+
+Créez trois enregistrements A dans votre gestionnaire DNS :
+
+| Sous-domaine | Type | Valeur |
+|---|---|---|
+| `viewer.votre-domaine.com` | A | IP du VPS |
+| `api.votre-domaine.com` | A | IP du VPS |
+| `n8n.votre-domaine.com` | A | IP du VPS |
+
+## Sécurisation de la GUI
+
+La GUI est protégée par une authentification basique (HTTP Basic Auth) configurée dans le `Caddyfile`. Pour générer un mot de passe :
 
 ```bash
-docker compose up -d
-```
-Les ports 3111 (API) et 3113 (Viewer) sont désormais exposés **uniquement** sur `127.0.0.1` du VPS.
-
-## 3. Configuration du Reverse Proxy (Caddy)
-
-Caddy est recommandé pour sa gestion automatique des certificats SSL (HTTPS).
-
-### Installation de Caddy
-```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install caddy
+docker run --rm caddy:2-alpine caddy hash-password --plaintext "VotreMotDePasse"
 ```
 
-### Configuration (Caddyfile)
+Copiez le hash généré dans le `Caddyfile` à la place de `$2a$14$REMPLACER_PAR_HASH_GENERE`.
 
-Créez ou modifiez `/etc/caddy/Caddyfile` :
+## Connexion des agents distants
 
-```caddyfile
-# GUI (Viewer)
-viewer.votre-domaine.com {
-    reverse_proxy 127.0.0.1:3113
-    
-    # Authentification basique pour protéger la GUI
-    basicauth / {
-        # Remplacez par un hash généré avec `caddy hash-password`
-        admin JDJhJDE0JE9LME... 
-    }
-}
-
-# API REST
-api.votre-domaine.com {
-    reverse_proxy 127.0.0.1:3111
-}
-```
-
-Rechargez Caddy :
-```bash
-sudo systemctl reload caddy
-```
-
-## 4. Configuration du Client (Claude Code / Agents)
-
-Maintenant que l'API est exposée en HTTPS, configurez vos agents locaux pour pointer vers le VPS.
-
-Dans votre configuration d'agent (ex: `~/.claude/settings.json`), ajoutez :
+Une fois le VPS déployé, configurez vos agents locaux pour pointer vers l'API distante :
 
 ```json
 {
@@ -88,14 +68,18 @@ Dans votre configuration d'agent (ex: `~/.claude/settings.json`), ajoutez :
       "args": ["-y", "@agentmemory/agentmemory", "mcp"],
       "env": {
         "AGENTMEMORY_URL": "https://api.votre-domaine.com",
-        "AGENTMEMORY_SECRET": "votre_secret_tres_long_et_aleatoire"
+        "AGENTMEMORY_SECRET": "votre_secret_du_fichier_env"
       }
     }
   }
 }
 ```
 
-## 5. Accès à la GUI
+## Maintenance
 
-Ouvrez votre navigateur sur `https://viewer.votre-domaine.com`. 
-Connectez-vous avec les identifiants configurés dans Caddy. Vous avez maintenant accès en temps réel à la mémoire de vos agents depuis n'importe où.
+| Commande | Description |
+|---|---|
+| `docker compose -f docker-compose.agentic-os.yml logs -f` | Voir les logs en temps réel |
+| `docker compose -f docker-compose.agentic-os.yml restart` | Redémarrer tous les services |
+| `docker compose -f docker-compose.agentic-os.yml down` | Arrêter tous les services |
+| `docker compose -f docker-compose.agentic-os.yml pull && docker compose -f docker-compose.agentic-os.yml up -d` | Mettre à jour les images |

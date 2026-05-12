@@ -1,15 +1,24 @@
-# Exemple de configuration Caddy pour AgentMemory
+# Caddyfile pour Agentic OS (VPS Deployment)
+# Caddy gère automatiquement les certificats SSL (Let's Encrypt).
 # Remplacez "votre-domaine.com" par votre vrai domaine.
 
+# GUI AgentMemory (Viewer)
 viewer.votre-domaine.com {
-    reverse_proxy 127.0.0.1:3113
-    
+    reverse_proxy iii-engine:3113
+
+    # Authentification basique (protège la GUI)
     # Générez le hash avec : caddy hash-password
     basicauth / {
-        admin $2a$14$O2... 
+        admin $2a$14$REMPLACER_PAR_HASH_GENERE
     }
 }
 
+# API AgentMemory (REST)
 api.votre-domaine.com {
-    reverse_proxy 127.0.0.1:3111
+    reverse_proxy iii-engine:3111
+}
+
+# n8n (Automatisation)
+n8n.votre-domaine.com {
+    reverse_proxy n8n:5678
 }

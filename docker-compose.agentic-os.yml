@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # 1. AgentMemory (Core Engine)
+  iii-engine:
+    image: iiidev/iii:${AGENTMEMORY_III_VERSION:-0.11.2}
+    ports:
+      - "127.0.0.1:3111:3111" # REST API
+      - "127.0.0.1:3112:3112" # Streams
+      - "127.0.0.1:3113:3113" # Viewer GUI
+      - "127.0.0.1:49134:49134" # Bridge
+    volumes:
+      - iii-data:/data
+      - ./iii-config.docker.yaml:/app/config.yaml:ro
+    environment:
+      - AGENTMEMORY_SECRET=${AGENTMEMORY_SECRET:-}
+      - OBSIDIAN_AUTO_EXPORT=true
+      - AGENTMEMORY_EXPORT_ROOT=/obsidian
+    restart: unless-stopped
+
+  # 2. Obsidian FS-Watcher (Synchronisation bidirectionnelle)
+  obsidian-watcher:
+    image: node:20-alpine
+    command: sh -c "npm install -g @agentmemory/fs-watcher && npx @agentmemory/fs-watcher /obsidian"
+    environment:
+      - AGENTMEMORY_FS_WATCH_DIRS=/obsidian
+      - AGENTMEMORY_URL=http://iii-engine:3111
+      - AGENTMEMORY_SECRET=${AGENTMEMORY_SECRET:-}
+    volumes:
+      - ${CHEMIN_VAULT_OBSIDIAN:-./memory/storage/obsidian}:/obsidian
+    depends_on:
+      - iii-engine
+    restart: unless-stopped
+
+  # 3. n8n (Automatisation)
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=${DOMAIN_NAME:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${PROTOCOL:-http}
+      - WEBHOOK_URL=${PROTOCOL:-http}://${DOMAIN_NAME:-localhost}/
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+
+  # 4. Caddy (Reverse Proxy SSL & Auth) - Optionnel si déploiement VPS
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    profiles:
+      - vps
+
+volumes:
+  iii-data:
+  n8n_data:
+  caddy_data:
+  caddy_config:
