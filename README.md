@@ -1042,3 +1042,7 @@ For a complete view of the OS, please refer to:
 1. Copy `.env.example` to `.env` and fill in your secrets.
 2. Run `scripts/bootstrap.sh` to initialize the environment.
 3. Configure your orchestrator (e.g., Claude Code) to use this memory server.
+
+## Hébergement sur VPS
+
+Pour héberger la GUI (Viewer) et l'API AgentMemory sur un serveur distant (VPS) et y accéder de manière sécurisée (HTTPS + Authentification), consultez le [Guide de Déploiement VPS](VPS_DEPLOYMENT.md).

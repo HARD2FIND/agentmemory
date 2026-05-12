@@ -1,0 +1,15 @@
+# Exemple de configuration Caddy pour AgentMemory
+# Remplacez "votre-domaine.com" par votre vrai domaine.
+
+viewer.votre-domaine.com {
+    reverse_proxy 127.0.0.1:3113
+    
+    # Générez le hash avec : caddy hash-password
+    basicauth / {
+        admin $2a$14$O2... 
+    }
+}
+
+api.votre-domaine.com {
+    reverse_proxy 127.0.0.1:3111
+}
